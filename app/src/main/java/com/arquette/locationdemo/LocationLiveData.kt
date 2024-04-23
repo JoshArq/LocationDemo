@@ -3,6 +3,8 @@ package com.arquette.locationdemo
 import android.content.Context
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
 import android.location.Location
 //import android.location.LocationRequest
 import android.os.Looper
@@ -14,6 +16,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
+import java.util.Locale
 
 class LocationLiveData(var context: Context): LiveData<LocationDetails>(){
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -41,6 +44,7 @@ class LocationLiveData(var context: Context): LiveData<LocationDetails>(){
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             location.also {
                 setLocationData(it)
+                getAddressFromLocation(it)
             }
         }
         startLocationUpdates()
@@ -51,6 +55,7 @@ class LocationLiveData(var context: Context): LiveData<LocationDetails>(){
             locationResult ?: return
             for(location in locationResult.locations){
                 setLocationData(location)
+                getAddressFromLocation(location)
             }
         }
     }
@@ -63,6 +68,31 @@ class LocationLiveData(var context: Context): LiveData<LocationDetails>(){
                         .setPriority(PRIORITY_HIGH_ACCURACY)
                         .build()
     }
+
+    private val geocoderCallback = object : Geocoder.GeocodeListener {
+        override fun onGeocode(addresses: MutableList<Address>) {
+            postValue(
+                LocationDetails(
+                    addresses.get(0).longitude.toString(),
+                    addresses.get(0).latitude.toString(),
+                    addresses.get(0).getAddressLine(0)
+                )
+            )
+        }
+
+        override fun onError(errorMessage:String?){
+            super.onError(errorMessage)
+            postValue(LocationDetails("","",errorMessage?: "Error Geocoding"))
+        }
+    }//geocoder callback
+
+    private fun getAddressFromLocation(location:Location?){
+        val geocoder = Geocoder(context, Locale.getDefault())
+        location?.let{
+            geocoder.getFromLocation(location.latitude, location.longitude, 1, geocoderCallback)
+        }
+    }
+
 
     internal fun startLocationUpdates(){
 
@@ -89,11 +119,12 @@ class LocationLiveData(var context: Context): LiveData<LocationDetails>(){
 
     private fun setLocationData(location: Location?){
         location?.let{location ->
-            value = LocationDetails(location.longitude.toString(), location.latitude.toString())
+            value = LocationDetails(location.longitude.toString(), location.latitude.toString(), "")
         }
     }
 
     override fun onInactive(){
         super.onInactive()
+        fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 }

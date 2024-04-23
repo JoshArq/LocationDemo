@@ -1,3 +1,5 @@
 package com.arquette.locationdemo.dto
 
-data class LocationDetails(var longitude: String, var latitude: String)
+data class LocationDetails(var longitude: String, var latitude: String, var address:String){
+
+}

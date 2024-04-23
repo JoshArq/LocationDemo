@@ -85,6 +85,7 @@ fun LocationView(currentLocation: LocationDetails?){
         currentLocation?.let{
             Text(text = "Latitude ${currentLocation.latitude}")
             Text(text = "Longitude ${currentLocation.longitude}")
+            Text(text="Address ${currentLocation.address}")
         }
     }
 }
